@@ -1,23 +1,18 @@
 {
-  "name": "monitoring-frontend",
-  "version": "0.1.0",
-  "private": true,
+  "name": "monitoring-backend",
+  "version": "1.0.0",
+  "description": "Backend microservice for monitoring dashboard",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "lint": "eslint ."
+  },
   "dependencies": {
-    "axios": "^1.7.7",
-    "chart.js": "^4.4.4",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-chartjs-2": "^5.2.0"
+    "express": "^4.17.1",
+    "cors": "^2.8.5",
+    "winston": "^3.8.2"
   },
   "devDependencies": {
-    "react-scripts": "^5.1.0",
-    "eslint": "^9.11.1",
-    "@eslint/config-array": "^0.18.0",
-    "@eslint/object-schema": "^2.1.4"
-  },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "lint": "eslint src"
+    "eslint": "^9.11.1"
   }
 }
