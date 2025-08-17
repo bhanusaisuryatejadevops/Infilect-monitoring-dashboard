@@ -1,0 +1,88 @@
+stages:
+  - test
+  - lint
+  - build
+  - deploy
+
+variables:
+  DOCKER_REGISTRY: docker.io
+  DOCKER_IMAGE_BACKEND: suryatejainfra/monitoring-backend
+  DOCKER_IMAGE_FRONTEND: suryatejainfra/monitoring-frontend
+
+test-backend:
+  stage: test
+  image: node:18-alpine
+  script:
+    - cd backend
+    - npm install
+    - echo "Placeholder: Add unit tests here"
+
+test-frontend:
+  stage: test
+  image: node:18-alpine
+  script:
+    - cd frontend
+    - npm install
+    - echo "Placeholder: Add unit tests here"
+
+lint-backend:
+  stage: lint
+  image: node:18-alpine
+  script:
+    - cd backend
+    - npm install
+    - npm run lint
+
+lint-frontend:
+  stage: lint
+  image: node:18-alpine
+  script:
+    - cd frontend
+    - npm install
+    - npm run lint
+
+build-backend:
+  stage: build
+  image: docker:20.10
+  services:
+    - docker:dind
+  variables:
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - cd backend
+    - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+    - docker build -t $DOCKER_IMAGE_BACKEND:latest .
+    - docker push $DOCKER_IMAGE_BACKEND:latest
+  only:
+    - main
+
+build-frontend:
+  stage: build
+  image: docker:20.10
+  services:
+    - docker:dind
+  variables:
+    DOCKER_TLS_CERTDIR: ""
+  script:
+    - cd frontend
+    - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+    - docker build -t $DOCKER_IMAGE_FRONTEND:latest .
+    - docker push $DOCKER_IMAGE_FRONTEND:latest
+  only:
+    - main
+
+deploy:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  script:
+    - kubectl config set-cluster k3s --server=https://localhost:6443
+    - kubectl config set-credentials k3s --token=$K3S_TOKEN
+    - kubectl config set-context k3s --cluster=k3s --user=k3s
+    - kubectl config use-context k3s
+    - kubectl apply -f k8s/namespace.yaml
+    - kubectl apply -f k8s/backend-deployment.yaml
+    - kubectl apply -f k8s/backend-service.yaml
+    - kubectl apply -f k8s/frontend-deployment.yaml
+    - kubectl apply -f k8s/frontend-service.yaml
+  only:
+    - main
