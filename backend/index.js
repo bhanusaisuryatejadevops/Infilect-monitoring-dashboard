@@ -4,7 +4,6 @@ const winston = require('winston');
 const app = express();
 const port = process.env.PORT || 3001;
 
-// Logger setup
 const logger = winston.createLogger({
   level: 'info',
   format: winston.format.combine(
