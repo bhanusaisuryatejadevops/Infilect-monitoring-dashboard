@@ -25,7 +25,7 @@ const App = () => {
   useEffect(() => {
     const fetchMetrics = async () => {
       try {
-        const response = await axios.get('http://localhost:3001/metrics');
+        const response = await axios.get('http://backend:3001/metrics');
         setMetrics(response.data);
         setChartData((prev) => {
           const newLabels = [...prev.labels, new Date().toLocaleTimeString()].slice(-10);
