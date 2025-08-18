@@ -132,12 +132,16 @@ jobs:
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > $HOME/.kube/config
 
-      - name: Deploy to K3s (skip TLS verify)
+      - name: Verify cluster access
+        run: |
+          kubectl cluster-info --insecure-skip-tls-verify=true
+
+      - name: Deploy to K3s
         run: |
           kubectl apply --insecure-skip-tls-verify=true -f k8s/namespace.yaml || true
           kubectl apply --insecure-skip-tls-verify=true -f k8s/backend-deployment.yaml
           kubectl apply --insecure-skip-tls-verify=true -f k8s/backend-service.yaml
           kubectl apply --insecure-skip-tls-verify=true -f k8s/frontend-deployment.yaml
           kubectl apply --insecure-skip-tls-verify=true -f k8s/frontend-service.yaml
-          kubectl rollout restart deployment/backend -n monitoring --insecure-skip-tls-verify=true || true
-          kubectl rollout restart deployment/frontend -n monitoring --insecure-skip-tls-verify=true || true
+          kubectl -n monitoring rollout restart deployment/backend || true
+          kubectl -n monitoring rollout restart deployment/frontend || true
