@@ -1,19 +1,19 @@
 Monitoring Dashboard Platform
 Overview
-The Monitoring Dashboard Platform is a lightweight application for visualizing real-time metrics. It consists of a Node.js backend exposing a /metrics endpoint and a React frontend displaying dynamic charts. The application is containerized using Docker, orchestrated with a k3s Kubernetes cluster on an AWS EC2 instance (publicip), and automated via a GitHub Actions CI/CD pipeline.
+The Monitoring Dashboard Platform is a lightweight application for visualizing real-time metrics. It consists of a Node.js backend exposing a /metrics endpoint and a React frontend displaying dynamic charts. The application is containerized using Docker, orchestrated with a k3s Kubernetes cluster on an AWS EC2 instance (34.235.116.29), and automated via a GitHub Actions CI/CD pipeline.
 System Architecture
 
-The system architecture, depicted in architecture.png (created using draw.io), includes:
+The system architecture, depicted in architecture.svg (created using draw.io), includes:
 
 GitHub Actions Pipeline: Triggers on pull requests and merges to main, executing tests, linting, Docker image builds, and k3s deployments.
 Docker Hub: Hosts images suryatejainfra/monitoring-backend:latest and suryatejainfra/monitoring-frontend:latest.
-k3s Cluster: Runs on EC2 (publicip) in the monitoring namespace, with:
+k3s Cluster: Runs on EC2 (34.235.116.29) in the monitoring namespace, with:
 Backend Deployment: Node.js/Express pod serving /metrics on port 3001.
 Frontend Deployment: React/Chart.js pod polling the backend.
 Services: NodePort services exposing backend (31001) and frontend (31000).
 
 
-External Access: Backend at http://publicip:31001/metrics, frontend at http://publicip:31000.
+External Access: Backend at http://34.235.116.29:31001/metrics, frontend at http://34.235.116.29:31000.
 
 Tech Stack Choices
 
@@ -47,7 +47,7 @@ kubectl: For interacting with the k3s cluster.
 GitHub Account: For repository access and CI/CD configuration.
 Docker Hub Account: For image storage (suryatejainfra).
 Node.js: For local development (optional).
-EC2 Key Pair: For SSH access to ubuntu@publicip.
+EC2 Key Pair: For SSH access to ubuntu@34.235.116.29.
 
 Steps
 
@@ -124,13 +124,13 @@ git push origin main
 Accessing Services
 
 Local (Docker Compose):
-Backend: http://publicip:3001/metrics
-Frontend: http://publicip:3000
+Backend: http://34.235.116.29:3001/metrics
+Frontend: http://34.235.116.29:3000
 
 
 Kubernetes (k3s):
-Backend: http://publicip:31001/metrics
-Frontend: http://publicip:31000
+Backend: http://34.235.116.29:31001/metrics
+Frontend: http://34.235.116.29:31000
 
 
 
@@ -147,7 +147,7 @@ kubectl -n monitoring logs -l app=frontend
 Backend Logs: Check backend/logs/app.log for request and metrics logs (if configured).
 Troubleshooting:
 Pipeline Failure: Check logs at https://github.com/bhanusaisuryatejadevops/Infilect-monitoring-dashboard/actions.
-k3s Issues: Verify k3s is running:ssh -i <path-to-your-ec2-key.pem> ubuntu@publicip
+k3s Issues: Verify k3s is running:ssh -i <path-to-your-ec2-key.pem> ubuntu@34.235.116.29
 sudo systemctl status k3s
 
 Restart if needed:sudo systemctl restart k3s
@@ -165,4 +165,3 @@ Test backend from frontend pod:kubectl -n monitoring exec -it pod/frontend-<pod-
 apk add curl
 curl http://backend:3001/metrics
 exit
-
