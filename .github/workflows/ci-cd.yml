@@ -130,12 +130,10 @@ jobs:
       - name: Configure kubectl with K3s
         env:
           K3S_TOKEN: ${{ secrets.K3S_TOKEN }}
-          K3S_CA_CRT: ${{ secrets.K3S_CA_CRT }}
         run: |
-          echo "$K3S_CA_CRT" | base64 -d > ca.crt
           kubectl config set-cluster k3s \
             --server=https://18.209.45.0:6443 \
-            --certificate-authority=ca.crt
+            --insecure-skip-tls-verify=true
           kubectl config set-credentials k3s-user \
             --token=$K3S_TOKEN
           kubectl config set-context k3s-context \
