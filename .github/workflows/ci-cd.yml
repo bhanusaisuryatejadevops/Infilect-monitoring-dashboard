@@ -132,7 +132,7 @@ jobs:
           K3S_TOKEN: ${{ secrets.K3S_TOKEN }}
         run: |
           kubectl config set-cluster k3s \
-            --server=https://<YOUR_EC2_PUBLIC_IP>:6443 \
+            --server=https://18.209.45.0:6443 \
             --insecure-skip-tls-verify=true
           kubectl config set-credentials k3s-user \
             --token=$K3S_TOKEN
