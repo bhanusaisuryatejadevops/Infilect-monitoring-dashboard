@@ -1,7 +1,7 @@
 # Monitoring Dashboard Platform
 
 ## Overview
-This project is a simple Monitoring Dashboard Platform with a Node.js backend exposing mock metrics and a React frontend visualizing real-time metrics. It is containerized using Docker, deployed on a local k3s Kubernetes cluster, and automated with a GitLab CI pipeline.
+This project is a simple Monitoring Dashboard Platform with a Node.js backend exposing mock metrics and a React frontend visualizing real-time metrics. It is containerized using Docker, deployed on a local k3s Kubernetes cluster, and automated with a GitLab CI pipeline..
 
 ## System Architecture
 ![Architecture Diagram](architecture.png)
