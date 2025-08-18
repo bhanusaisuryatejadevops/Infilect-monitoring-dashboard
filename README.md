@@ -1,167 +1,184 @@
-Monitoring Dashboard Platform
-Overview
-The Monitoring Dashboard Platform is a lightweight application for visualizing real-time metrics. It consists of a Node.js backend exposing a /metrics endpoint and a React frontend displaying dynamic charts. The application is containerized using Docker, orchestrated with a k3s Kubernetes cluster on an AWS EC2 instance (34.235.116.29), and automated via a GitHub Actions CI/CD pipeline.
-System Architecture
+# 📊 Monitoring Dashboard Platform
 
-The system architecture, depicted in architecture.svg (created using draw.io), includes:
+A lightweight **monitoring dashboard** for visualizing real-time metrics.  
+It includes a **Node.js backend** and **React frontend**, containerized with **Docker**, orchestrated via **k3s Kubernetes (AWS EC2)**, and automated using a **GitHub Actions CI/CD pipeline**.
 
-GitHub Actions Pipeline: Triggers on pull requests and merges to main, executing tests, linting, Docker image builds, and k3s deployments.
-Docker Hub: Hosts images suryatejainfra/monitoring-backend:latest and suryatejainfra/monitoring-frontend:latest.
-k3s Cluster: Runs on EC2 (34.235.116.29) in the monitoring namespace, with:
-Backend Deployment: Node.js/Express pod serving /metrics on port 3001.
-Frontend Deployment: React/Chart.js pod polling the backend.
-Services: NodePort services exposing backend (31001) and frontend (31000).
+---
 
+## 🏗️ System Architecture
 
-External Access: Backend at http://34.235.116.29:31001/metrics, frontend at http://34.235.116.29:31000.
+```mermaid
+flowchart LR
+    subgraph GitHub["GitHub Repository"]
+        A1["Code Push / PR"] --> A2["GitHub Actions Pipeline"]
+    end
 
-Tech Stack Choices
+    subgraph CI["GitHub Actions"]
+        A2 --> B1["Test & Lint"]
+        B1 --> B2["Build Docker Images"]
+        B2 --> B3["Push to Docker Hub"]
+        B3 --> C1
+    end
 
-Node.js/Express:
-Reasoning: Lightweight, fast, and ideal for microservices. Express simplifies API development with robust middleware support, perfect for the /metrics endpoint.
+    subgraph DockerHub["Docker Hub"]
+        C1["Images: backend, frontend"]
+    end
 
+    subgraph AWS["AWS EC2 (34.235.116.29)"]
+        subgraph K3s["k3s Cluster (Namespace: monitoring)"]
+            D1["Backend Pod (Node.js/Express)\n/metrics on 3001"]
+            D2["Frontend Pod (React/Chart.js)"]
 
-React/Chart.js:
-Reasoning: React provides a modern, component-based UI for dynamic updates. Chart.js offers lightweight, responsive charts for metric visualization.
+            D1 -->|Service 31001| E1["Backend NodePort Service"]
+            D2 -->|Service 31000| E2["Frontend NodePort Service"]
 
+            E1 --> F1["External: http://34.235.116.29:31001/metrics"]
+            E2 --> F2["External: http://34.235.116.29:31000"]
+        end
+    end
+```
 
-Docker:
-Reasoning: Ensures consistent environments across development and production. Multi-stage builds keep images compact (<200MB).
+---
 
+## ⚙️ Tech Stack & Reasoning
 
-k3s:
-Reasoning: A lightweight Kubernetes distribution, optimized for resource-constrained environments like a single EC2 instance.
+- **Node.js / Express** → Lightweight, efficient, and well-suited for microservices.  
+- **React / Chart.js** → Modern component-based UI with real-time chart rendering.  
+- **Docker** → Guarantees consistency across dev & prod, compact multi-stage builds.  
+- **k3s (Kubernetes)** → Lightweight Kubernetes distribution for EC2 single-node clusters.  
+- **GitHub Actions** → Fully automated CI/CD with GitHub integration and Docker/Kubernetes support.  
 
+---
 
-GitHub Actions:
-Reasoning: Free-tier CI/CD, seamlessly integrates with GitHub, and supports Docker and Kubernetes workflows efficiently.
+## 🛠️ Local Deployment Guide
 
+### **Prerequisites**
+- Docker  
+- k3s & kubectl installed  
+- GitHub & Docker Hub account (`suryatejainfra`)  
+- Node.js (optional for local dev)  
+- EC2 key pair for SSH  
 
+### **Steps**
+1. **Clone Repository**
+   ```bash
+   git clone https://github.com/bhanusaisuryatejadevops/Infilect-monitoring-dashboard.git
+   cd Infilect-monitoring-dashboard
+   ```
 
-Local Deployment Guide
-Prerequisites
+2. **Run Locally (Docker Compose)**
+   ```bash
+   docker-compose up --build
+   ```
+   - Backend → [http://localhost:3001/metrics](http://localhost:3001/metrics)  
+   - Frontend → [http://localhost:3000](http://localhost:3000)
 
-Docker: For building and running containers.
-k3s: Lightweight Kubernetes (curl -sfL https://get.k3s.io | sh -).
-kubectl: For interacting with the k3s cluster.
-GitHub Account: For repository access and CI/CD configuration.
-Docker Hub Account: For image storage (suryatejainfra).
-Node.js: For local development (optional).
-EC2 Key Pair: For SSH access to ubuntu@34.235.116.29.
+3. **Set Up k3s on EC2**
+   ```bash
+   ssh -i <path-to-ec2-key.pem> ubuntu@34.235.116.29
+   curl -sfL https://get.k3s.io | sh -
+   export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+   sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+   sudo chown $(whoami):$(whoami) ~/.kube/config
+   chmod 600 ~/.kube/config
+   ```
 
-Steps
+4. **Apply Kubernetes Manifests**
+   ```bash
+   kubectl apply -f k8s/namespace.yaml
+   kubectl apply -f k8s/backend-deployment.yaml
+   kubectl apply -f k8s/backend-service.yaml
+   kubectl apply -f k8s/frontend-deployment.yaml
+   kubectl apply -f k8s/frontend-service.yaml
+   ```
 
-Clone the Repository:
-git clone https://github.com/bhanusaisuryatejadevops/Infilect-monitoring-dashboard.git
-cd Infilect-monitoring-dashboard
+---
 
+## 🔄 Running the CI/CD Pipeline
 
-Run Locally with Docker Compose:
-docker-compose up --build
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant GH as GitHub
+    participant GA as GitHub Actions
+    participant DH as Docker Hub
+    participant K3s as k3s Cluster (EC2)
 
+    Dev->>GH: Push / PR to main
+    GH->>GA: Trigger CI/CD pipeline
+    GA->>GA: Run Tests (npm test)
+    GA->>GA: Run Linting (npm run lint)
+    GA->>DH: Build & Push Docker Images
+    DH->>K3s: New Images Available
+    GA->>K3s: Apply Kubernetes Manifests
+    K3s->>Dev: Deploy Backend & Frontend Pods
+    Dev->>K3s: Access services on NodePorts (31000, 31001)
+```
 
-Access:
-Backend: http://34.235.116.29:3001/metrics
-Frontend: http://34.235.116.29:3000
+### **Secrets Required**
+- `DOCKER_USERNAME` → Docker Hub username (`suryatejainfra`)  
+- `DOCKER_PASSWORD` → Docker Hub access token  
+- `K3S_TOKEN` → From EC2:  
+  ```bash
+  sudo cat /var/lib/rancher/k3s/server/node-token
+  ```
 
+### **Pipeline Stages**
+1. **Test** → `npm test` (backend & frontend)  
+2. **Lint** → `npm run lint`  
+3. **Build & Push** → Docker images → Docker Hub  
+4. **Deploy** → Applies Kubernetes manifests  
 
+👉 **Pipeline Status:** [GitHub Actions](https://github.com/bhanusaisuryatejadevops/Infilect-monitoring-dashboard/actions)  
 
+---
 
-Set Up k3s on EC2:
-ssh -i <path-to-your-ec2-key.pem> ubuntu@34.235.116.29
-curl -sfL https://get.k3s.io | sh -
-export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
-sudo chown $(whoami):$(whoami) ~/.kube/config
-chmod 600 ~/.kube/config
+## 📡 Accessing Services
 
+- **Local (Docker Compose):**
+  - Backend → [http://localhost:3001/metrics](http://localhost:3001/metrics)  
+  - Frontend → [http://localhost:3000](http://localhost:3000)  
 
-Apply Kubernetes Manifests:
-kubectl apply -f k8s/namespace.yaml
-kubectl apply -f k8s/backend-deployment.yaml
-kubectl apply -f k8s/backend-service.yaml
-kubectl apply -f k8s/frontend-deployment.yaml
-kubectl apply -f k8s/frontend-service.yaml
+- **Kubernetes (k3s on EC2):**
+  - Backend → [http://34.235.116.29:31001/metrics](http://34.235.116.29:31001/metrics)  
+  - Frontend → [http://34.235.116.29:31000](http://34.235.116.29:31000)  
 
+---
 
-Access:
-Backend: http://34.235.116.29:31001/metrics
-Frontend: http://34.235.116.29:31000
+## 📝 Viewing Logs & Troubleshooting
 
+### **Logs**
+- **Docker Compose**
+  ```bash
+  docker-compose logs backend
+  docker-compose logs frontend
+  ```
+- **Kubernetes**
+  ```bash
+  kubectl -n monitoring logs -l app=backend
+  kubectl -n monitoring logs -l app=frontend
+  ```
 
+### **Pod Status**
+```bash
+kubectl -n monitoring get pods
+```
 
-
-Set Up GitHub Actions:
-
-Add secrets in GitHub (Settings > Secrets and variables > Actions > Secrets):
-DOCKER_USERNAME: suryatejainfra
-DOCKER_PASSWORD: Docker Hub access token (from https://hub.docker.com/settings/security)
-K3S_TOKEN: Run sudo cat /var/lib/rancher/k3s/server/node-token on EC2.
-
-
-Push code to trigger the pipeline.
-
-
-
-Running the CI/CD Pipeline
-
-Triggers: The pipeline runs on pull requests and merges to the main branch.
-Steps:
-Test: Executes npm test for backend and frontend (skips if not configured).
-Lint: Runs npm run lint for backend and frontend (skips if not configured).
-Build: Builds and pushes Docker images (suryatejainfra/monitoring-backend:latest, suryatejainfra/monitoring-frontend:latest) to Docker Hub.
-Deploy: Applies Kubernetes manifests to the k3s cluster and restarts deployments.
-
-
-Monitor: Check pipeline status at https://github.com/bhanusaisuryatejadevops/Infilect-monitoring-dashboard/actions.
-Trigger Manually:echo "# Test pipeline" >> README.md
-git add README.md
-git commit -m "Trigger CI/CD pipeline"
-git push origin main
-
-
-
-Accessing Services
-
-Local (Docker Compose):
-Backend: http://34.235.116.29:3001/metrics
-Frontend: http://34.235.116.29:3000
-
-
-Kubernetes (k3s):
-Backend: http://34.235.116.29:31001/metrics
-Frontend: http://34.235.116.29:31000
-
-
-
-Viewing Logs and Troubleshooting
-
-Docker Compose Logs:docker-compose logs backend
-docker-compose logs frontend
-
-
-Kubernetes Logs:kubectl -n monitoring logs -l app=backend
-kubectl -n monitoring logs -l app=frontend
-
-
-Backend Logs: Check backend/logs/app.log for request and metrics logs (if configured).
-Troubleshooting:
-Pipeline Failure: Check logs at https://github.com/bhanusaisuryatejadevops/Infilect-monitoring-dashboard/actions.
-k3s Issues: Verify k3s is running:ssh -i <path-to-your-ec2-key.pem> ubuntu@34.235.116.29
+### **Check k3s Service**
+```bash
 sudo systemctl status k3s
+sudo systemctl restart k3s   # if needed
+```
 
-Restart if needed:sudo systemctl restart k3s
+### **Networking**
+- Ensure EC2 security group allows:  
+  - `6443` → k3s API  
+  - `31000` → Frontend  
+  - `31001` → Backend  
 
+### **Verify Images**
+- [Docker Hub Repository](https://hub.docker.com/u/suryatejainfra)  
 
-Pod Issues: Check pod status:kubectl -n monitoring get pods
+---
 
-
-Network Issues: Ensure EC2 security group allows ports 6443 (k3s API), 31000 (frontend), and 31001 (backend).
-Docker Hub Issues: Verify images at https://hub.docker.com/u/suryatejainfra.
-Secrets Issues: Confirm DOCKER_USERNAME, DOCKER_PASSWORD, and K3S_TOKEN are set in GitHub Secrets.
-Dashboard Zeros: Verify frontend/src/App.js uses http://backend:3001/metrics and check frontend logs:kubectl -n monitoring logs -l app=frontend
-
-Test backend from frontend pod:kubectl -n monitoring exec -it pod/frontend-<pod-name> -- sh
-apk add curl
-curl http://backend:3001/metrics
-exit
+✅ This `README.md` is fully self-contained — all diagrams are written in **Mermaid** and render directly on GitHub.  
