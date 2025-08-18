@@ -4,142 +4,50 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
-  test-backend:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-      - name: Install backend dependencies
-        run: |
-          cd backend
-          npm install
-      - name: Run backend tests
-        run: |
-          cd backend
-          npm test || echo "No tests defined, skipping"
 
-  test-frontend:
-    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-      - name: Install frontend dependencies
-        run: |
-          cd frontend
-          npm install
-      - name: Run frontend tests
-        run: |
-          cd frontend
-          npm test || echo "No tests defined, skipping"
+      # Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-  lint-backend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-      - name: Install backend dependencies
-        run: |
-          cd backend
-          npm install
-      - name: Lint backend code
-        run: |
-          cd backend
-          npm run lint || echo "Linting not configured, skipping"
-
-  lint-frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-      - name: Install frontend dependencies
-        run: |
-          cd frontend
-          npm install
-      - name: Lint frontend code
-        run: |
-          cd frontend
-          npm run lint || echo "Linting not configured, skipping"
-
-  build-backend:
-    runs-on: ubuntu-latest
-    needs: [test-backend, lint-backend]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+      # Log in to DockerHub
+      - name: Log in to DockerHub
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # Build & push backend image
       - name: Build and push backend image
         run: |
-          cd backend
-          docker build -t suryatejainfra/monitoring-backend:latest .
-          docker push suryatejainfra/monitoring-backend:latest
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/backend:latest ./backend
+          docker push ${{ secrets.DOCKER_USERNAME }}/backend:latest
 
-  build-frontend:
-    runs-on: ubuntu-latest
-    needs: [test-frontend, lint-frontend]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+      # Build & push frontend image
       - name: Build and push frontend image
         run: |
-          cd frontend
-          docker build -t suryatejainfra/monitoring-frontend:latest .
-          docker push suryatejainfra/monitoring-frontend:latest
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/frontend:latest ./frontend
+          docker push ${{ secrets.DOCKER_USERNAME }}/frontend:latest
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: [build-backend, build-frontend]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v4
-        with:
-          version: 'latest'
-
-      - name: Configure kubeconfig
+      # Setup kubeconfig
+      - name: Setup kubeconfig
         run: |
           mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBECONFIG_DATA }}" > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config
-          kubectl cluster-info
+          echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > $HOME/.kube/config
 
-      - name: Deploy to K3s
+      # Verify cluster access
+      - name: Verify Kubernetes cluster
+        run: kubectl get nodes
+
+      # Deploy manifests
+      - name: Deploy to Kubernetes
         run: |
           kubectl apply -f k8s/namespace.yaml || true
           kubectl apply -f k8s/backend-deployment.yaml
           kubectl apply -f k8s/backend-service.yaml
           kubectl apply -f k8s/frontend-deployment.yaml
           kubectl apply -f k8s/frontend-service.yaml
-          kubectl -n monitoring rollout restart deployment/backend || true
-          kubectl -n monitoring rollout restart deployment/frontend || true
